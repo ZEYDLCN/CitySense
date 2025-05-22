@@ -5,6 +5,10 @@
 **Project Status:** Currently in development. The foundational infrastructure, data generation большинство, API data presentation, and static data display on the map have been completed. Real-time data streaming integration with SignalR is ongoing.
 
 ---
+![Harita](harita.png)
+
+![Harita 2](harita2.png)
+
 
 ## 🛰️ What is CitySense? (Hedeflenen / Targeted)
 
