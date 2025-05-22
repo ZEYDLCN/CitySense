@@ -1,0 +1,13 @@
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\bin\Debug\net6.0\CitySense.Data.deps.json
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\bin\Debug\net6.0\CitySense.Data.dll
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\bin\Debug\net6.0\CitySense.Data.pdb
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.csproj.AssemblyReference.cache
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.AssemblyInfoInputs.cache
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.AssemblyInfo.cs
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.csproj.CoreCompileInputs.cache
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\EFCoreNpgsqlNetTopologySuite.cs
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.dll
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\refint\CitySense.Data.dll
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\CitySense.Data.pdb
+C:\Users\ASUS\source\repos\CitySense\src\CitySense.Data\obj\Debug\net6.0\ref\CitySense.Data.dll

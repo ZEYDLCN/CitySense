@@ -1,0 +1,99 @@
+﻿@page "/signalrtest"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager // Hub URL'si için
+@implements IAsyncDisposable
+
+<h3>SignalR Test Sayfası</h3>
+
+@if (_hubConnection == null)
+{
+    <p>Hub bağlantısı oluşturuluyor...</p>
+}
+else
+{
+    <p>Hub Bağlantı Durumu: @_hubConnection.State</p>
+}
+
+<button @onclick="SendMessageToServer" disabled="@(!IsConnected)">Sunucuya Test Mesajı Gönder (Opsiyonel)</button>
+
+<h4>Alınan Mesajlar:</h4>
+<ul>
+    @foreach (var msg in _messages)
+    {
+        <li>@msg</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? _hubConnection;
+    private List<string> _messages = new List<string>();
+
+    public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // API adresini ve Hub yolunu burada doğrudan oluşturalım
+        var hubUrl = NavigationManager.ToAbsoluteUri("https://localhost:7179/sensorDataHub").ToString();
+        Console.WriteLine($"SignalRTestPage: Hub URL: {hubUrl}");
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(hubUrl)
+            .WithAutomaticReconnect()
+            .Build();
+
+        Console.WriteLine("SignalRTestPage: HubConnection oluşturuldu.");
+
+        _hubConnection.On<string>("ReceiveSimpleTest", (message) =>
+        {
+            var receivedMsg = $"ALINAN MESAJ (ReceiveSimpleTest): {message}";
+            Console.WriteLine(receivedMsg);
+            _messages.Add(receivedMsg);
+            InvokeAsync(StateHasChanged); // UI'ı güncelle
+        });
+        Console.WriteLine("SignalRTestPage: 'ReceiveSimpleTest' handler kaydedildi.");
+
+        _hubConnection.Closed += (error) =>
+        {
+            Console.WriteLine($"SignalRTestPage: Bağlantı kapandı. Hata: {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        try
+        {
+            Console.WriteLine("SignalRTestPage: Bağlantı başlatılıyor...");
+            await _hubConnection.StartAsync();
+            Console.WriteLine("SignalRTestPage: Bağlantı BAŞARIYLA başlatıldı!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalRTestPage: Bağlantı başlatılırken HATA: {ex.ToString()}");
+        }
+    }
+
+    // Bu opsiyonel, client'tan server'a mesaj göndermek için
+    private async Task SendMessageToServer()
+    {
+        if (_hubConnection is not null && IsConnected)
+        {
+            try
+            {
+                // API'deki SensorDataHub'a bir "SendClientMessage" metodu eklemeniz gerekir
+                // await _hubConnection.SendAsync("SendClientMessage", "Merhaba Server, ben Client!");
+                Console.WriteLine("SignalRTestPage: Sunucuya test mesajı gönderme denendi (metot Hub'da tanımlı olmalı).");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"SignalRTestPage: Sunucuya mesaj gönderirken hata: {ex.Message}");
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            Console.WriteLine("SignalRTestPage: HubConnection dispose ediliyor.");
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}

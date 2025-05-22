@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres_citysense:
+    image: postgis/postgis:15-3.3
+    container_name: citysense_db_container
+    environment:
+      POSTGRES_USER: citysense_user
+      POSTGRES_PASSWORD: zeyd1907
+      POSTGRES_DB: CitySenseDB
+    ports:
+      - "5432:5432"
+    volumes:
+      - citysense_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  citysense_postgres_data:

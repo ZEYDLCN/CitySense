@@ -1,0 +1,12 @@
+C:\Users\ASUS\source\repos\CitySense\Shared\bin\Debug\net6.0\CitySense.Shared.deps.json
+C:\Users\ASUS\source\repos\CitySense\Shared\bin\Debug\net6.0\CitySense.Shared.dll
+C:\Users\ASUS\source\repos\CitySense\Shared\bin\Debug\net6.0\CitySense.Shared.pdb
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.csproj.AssemblyReference.cache
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.AssemblyInfoInputs.cache
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.AssemblyInfo.cs
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.csproj.CoreCompileInputs.cache
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.dll
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\refint\CitySense.Shared.dll
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\CitySense.Shared.pdb
+C:\Users\ASUS\source\repos\CitySense\Shared\obj\Debug\net6.0\ref\CitySense.Shared.dll

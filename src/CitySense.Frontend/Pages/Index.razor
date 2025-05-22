@@ -1,0 +1,238 @@
+﻿@page "/"
+@using BlazorLeaflet
+@using BlazorLeaflet.Models
+@using System.Drawing
+@using CitySense.Shared.Dtos
+@using CitySense.Frontend.Services
+@inject IJSRuntime JSRuntime
+@inject SensorDataService ApiService
+@inject SignalRService SignalR
+@implements IAsyncDisposable
+
+<PageTitle>CitySense Canlı Harita</PageTitle>
+
+<h1>CitySense Gerçek Zamanlı Harita</h1>
+
+@if (!_mapJsReadyForLayers || _sensorDataPoints == null)
+{
+    <p><em>@(_loadingMessage)</em></p>
+}
+else if (!_sensorDataPoints.Any() && _mapJsReadyForLayers)
+{
+    <p><em>Harita hazır. Gösterilecek sensör verisi bulunamadı veya API'den bekleniyor...</em></p>
+}
+
+<div style="height: 600px; width: 100%;">
+    <LeafletMap Map="_map" @ref="_leafletMapRef" />
+</div>
+
+@code {
+    private Map _map;
+    private LeafletMap _leafletMapRef;
+    private bool _mapJsReadyForLayers = false;
+    private string _loadingMessage = "Başlatılıyor...";
+
+    private List<SensorDataPointDto> _sensorDataPoints = new List<SensorDataPointDto>();
+    private Dictionary<int, Marker> _sensorMarkers = new Dictionary<int, Marker>();
+
+    private LatLng _initialCenter = new LatLng(41.0082f, 28.9784f); // İstanbul
+    private float _initialZoom = 10f;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("Index.razor: OnInitializedAsync started.");
+        _loadingMessage = "Harita nesnesi C# tarafında oluşturuluyor...";
+        _map = new Map(JSRuntime)
+            {
+                Center = _initialCenter,
+                Zoom = _initialZoom
+            };
+        _map.OnInitialized += HandleMapJsInitialized;
+        Console.WriteLine("Index.razor: C# Map object created and OnInitialized event subscribed.");
+
+        SignalR.OnSensorDataReceived += HandleIncomingSensorData;
+
+        Console.WriteLine("Index.razor: SignalR connection starting...");
+        await SignalR.StartConnectionAsync(); // <--- Log öncesi ve sonrası
+        Console.WriteLine("Index.razor: SignalR connection started.");
+
+        _loadingMessage = "İlk sensör verileri çekiliyor...";
+        await LoadInitialSensorData();
+        Console.WriteLine("Index.razor: OnInitializedAsync finished.");
+    }
+
+    private async Task LoadInitialSensorData()
+    {
+        Console.WriteLine("Index.razor: LoadInitialSensorData started.");
+        try
+        {
+            _sensorDataPoints.Clear();
+            var initialData = await ApiService.GetLatestSensorDataAsync(20);
+            if (initialData != null)
+            {
+                _sensorDataPoints.AddRange(initialData);
+            }
+            _loadingMessage = $"{_sensorDataPoints.Count} ilk sensör verisi çekildi. Haritanın JS tarafında hazır olması bekleniyor...";
+            Console.WriteLine($"Index.razor: Sensor data fetched. Count: {_sensorDataPoints.Count}");
+
+            if (_mapJsReadyForLayers)
+            {
+                UpdateMarkersOnMap();
+            }
+        }
+        catch (Exception ex)
+        {
+            _loadingMessage = $"İlk sensör verileri çekilirken hata: {ex.Message}";
+            Console.WriteLine($"Error loading initial sensor data: {ex}");
+        }
+        StateHasChanged();
+    }
+
+    private void HandleMapJsInitialized()
+    {
+        Console.WriteLine("Index.razor: HandleMapJsInitialized (Leaflet JS Map is Ready) triggered!");
+        _loadingMessage = "Harita altyapısı (TileLayer) ekleniyor...";
+        try
+        {
+            _map.AddLayer(new TileLayer
+                {
+                    UrlTemplate = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    Attribution = "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
+                });
+            Console.WriteLine("Index.razor: TileLayer added.");
+            _mapJsReadyForLayers = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding TileLayer in HandleMapJsInitialized: {ex}");
+            _loadingMessage = "Harita altyapısı eklenirken hata oluştu!";
+        }
+
+        if (_mapJsReadyForLayers && _sensorDataPoints != null && _sensorDataPoints.Any())
+        {
+            _loadingMessage = "İlk markerlar harita hazırlandıktan sonra ekleniyor...";
+            UpdateMarkersOnMap();
+        }
+        else if (_mapJsReadyForLayers)
+        {
+            _loadingMessage = "Harita hazır, gösterilecek ilk sensör verisi yok veya bekleniyor.";
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleIncomingSensorData(SensorDataPointDto newDataPoint)
+    {
+        if (!_mapJsReadyForLayers)
+        {
+            Console.WriteLine("Index.razor: SignalR - Map not ready for layers, skipping incoming data handling.");
+            return;
+        }
+
+        Console.WriteLine($"Index.razor: SignalR - Received data for Sensor ID {newDataPoint.Sensor?.Id}");
+
+        if (newDataPoint?.Sensor?.Location == null || _map == null)
+        {
+            Console.WriteLine("Index.razor: SignalR - Preconditions not met for handling incoming data.");
+            return;
+        }
+
+        var sensorId = newDataPoint.Sensor.Id;
+        var newLocation = new LatLng((float)newDataPoint.Sensor.Location.Latitude, (float)newDataPoint.Sensor.Location.Longitude);
+        var newTooltipContent = $"{newDataPoint.Sensor.Name}: {newDataPoint.Value} {newDataPoint.Unit}";
+        var newPopupContent = $"<b>{newDataPoint.Sensor.Name}</b><br/>Değer: {newDataPoint.Value} {newDataPoint.Unit}<br/>Zaman: {newDataPoint.Timestamp:G}";
+
+        if (_sensorMarkers.TryGetValue(sensorId, out Marker existingMarker))
+        {
+            try
+            {
+                _map.RemoveLayer(existingMarker);
+                _sensorMarkers.Remove(sensorId);
+                Console.WriteLine($"Index.razor: SignalR - Removed existing marker for Sensor ID {sensorId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Index.razor: SignalR - Error removing marker for Sensor ID {sensorId}: {ex.Message}");
+            }
+        }
+
+        var newMarker = new Marker(newLocation)
+            {
+                Tooltip = new Tooltip { Content = newTooltipContent },
+                Popup = new Popup { Content = newPopupContent }
+            };
+
+        try
+        {
+            _map.AddLayer(newMarker);
+            _sensorMarkers[sensorId] = newMarker;
+            Console.WriteLine($"Index.razor: SignalR - Added/Updated marker for Sensor ID {sensorId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Index.razor: SignalR - Error adding new marker for Sensor ID {sensorId}: {ex.Message}");
+        }
+
+        var existingDataPoint = _sensorDataPoints.FirstOrDefault(p => p.Sensor?.Id == sensorId);
+        if (existingDataPoint != null) _sensorDataPoints.Remove(existingDataPoint);
+        _sensorDataPoints.Add(newDataPoint);
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateMarkersOnMap()
+    {
+        if (_map == null || _sensorDataPoints == null || !_mapJsReadyForLayers)
+        {
+            Console.WriteLine("Index.razor: UpdateMarkersOnMap - Preconditions not met.");
+            return;
+        }
+
+        Console.WriteLine("Index.razor: UpdateMarkersOnMap - Clearing old markers from map.");
+        foreach (var oldMarker in _sensorMarkers.Values)
+        {
+            try { _map.RemoveLayer(oldMarker); }
+            catch (Exception ex) { Console.WriteLine($"Error removing a marker during UpdateMarkersOnMap: {ex.Message}"); }
+        }
+        _sensorMarkers.Clear();
+
+        Console.WriteLine($"Index.razor: UpdateMarkersOnMap - Adding {_sensorDataPoints.Count} new markers.");
+        foreach (var dataPoint in _sensorDataPoints)
+        {
+            if (dataPoint.Sensor?.Location != null)
+            {
+                var markerLocation = new LatLng((float)dataPoint.Sensor.Location.Latitude, (float)dataPoint.Sensor.Location.Longitude);
+                var marker = new Marker(markerLocation)
+                    {
+                        Tooltip = new Tooltip { Content = $"{dataPoint.Sensor.Name}: {dataPoint.Value} {dataPoint.Unit}" },
+                        Popup = new Popup { Content = $"<b>{dataPoint.Sensor.Name}</b><br/>Değer: {dataPoint.Value} {dataPoint.Unit}<br/>Zaman: {dataPoint.Timestamp:G}" }
+                    };
+                try
+                {
+                    _map.AddLayer(marker);
+                    _sensorMarkers[dataPoint.Sensor.Id] = marker;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error adding marker for {dataPoint.Sensor.Name} during UpdateMarkersOnMap: {ex.Message}");
+                }
+            }
+        }
+        _loadingMessage = "Harita ve markerlar yüklendi.";
+        Console.WriteLine("Index.razor: UpdateMarkersOnMap finished.");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Console.WriteLine("Index.razor: DisposeAsync called.");
+        if (_map != null)
+        {
+            _map.OnInitialized -= HandleMapJsInitialized;
+        }
+        if (SignalR != null)
+        {
+            SignalR.OnSensorDataReceived -= HandleIncomingSensorData;
+            await SignalR.StopConnectionAsync();
+        }
+    }
+}
